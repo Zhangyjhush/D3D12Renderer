@@ -1,0 +1,13 @@
+﻿  d3dApp.cpp
+  d3dUtil.cpp
+  DDSTextureLoader.cpp
+  GameTimer.cpp
+  GeometryGenerator.cpp
+  MathHelper.cpp
+  FrameResource.cpp
+  GpuWaves.cpp
+  RenderTarget.cpp
+  SobelApp.cpp
+  SobelFilter.cpp
+  Generating Code...
+  SobelFilter.vcxproj -> E:\D3DRenderer\Chapter 13 The Compute Shader\SobelFilter\x64\Debug\SobelFilter.exe

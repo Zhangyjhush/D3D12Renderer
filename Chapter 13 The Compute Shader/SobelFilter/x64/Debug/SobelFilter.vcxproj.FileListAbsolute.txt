@@ -1,0 +1,2 @@
+C:\Users\YH-10185\Downloads\d3d12book-master\d3d12book-master\Chapter 13 The Compute Shader\SobelFilter\x64\Debug\SobelFilter.exe
+E:\D3DRenderer\Chapter 13 The Compute Shader\SobelFilter\x64\Debug\SobelFilter.exe
