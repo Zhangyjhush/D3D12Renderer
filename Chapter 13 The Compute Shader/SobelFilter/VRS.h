@@ -29,6 +29,7 @@ public:
 		ID3D12RootSignature* rootSig,
 		ID3D12PipelineState* pso,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE input);
+	Microsoft::WRL::ComPtr<ID3D12Resource> GetOutput();
 
 private:
 	void BuildDescriptors();
@@ -40,7 +41,7 @@ private:
 
 	UINT mWidth = 0;
 	UINT mHeight = 0;
-	DXGI_FORMAT mFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT mFormat = DXGI_FORMAT_R8_UINT;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE mhCpuSrv;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE mhCpuUav;

@@ -9,6 +9,7 @@
 #include "FrameResource.h"
 #include "GpuWaves.h"
 #include "SobelFilter.h"
+#include "VRS.h"
 #include "RenderTarget.h"
 
 using Microsoft::WRL::ComPtr;
@@ -99,6 +100,7 @@ private:
     void BuildRootSignature();
 	void BuildWavesRootSignature();
 	void BuildPostProcessRootSignature();
+	void BuildVRSRootSignature();
 	void BuildDescriptorHeaps();
     void BuildShadersAndInputLayout();
     void BuildLandGeometry();
@@ -127,6 +129,7 @@ private:
     ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
 	ComPtr<ID3D12RootSignature> mWavesRootSignature = nullptr;
 	ComPtr<ID3D12RootSignature> mPostProcessRootSignature = nullptr;
+	ComPtr<ID3D12RootSignature> mVRSRootSignature = nullptr;
 
 	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
  
@@ -149,6 +152,7 @@ private:
 	std::unique_ptr<RenderTarget> mOffscreenRT = nullptr;
 
 	std::unique_ptr<SobelFilter> mSobelFilter = nullptr;
+	std::unique_ptr<VRSPass> mVRSPass = nullptr;
 
     PassConstants mMainPassCB;
 
@@ -218,6 +222,8 @@ bool SobelApp::Initialize()
 		md3dDevice.Get(),
 		mClientWidth, mClientHeight,
 		mBackBufferFormat);
+
+	mVRSPass = std::make_unique<VRSPass>(md3dDevice.Get(), mClientWidth, mClientHeight, DXGI_FORMAT::DXGI_FORMAT_R8_UINT);
  
 	mOffscreenRT = std::make_unique<RenderTarget>(
 		md3dDevice.Get(),
@@ -228,6 +234,7 @@ bool SobelApp::Initialize()
     BuildRootSignature();
 	BuildWavesRootSignature();
 	BuildPostProcessRootSignature();
+	BuildVRSRootSignature();
 	BuildDescriptorHeaps();
     BuildShadersAndInputLayout();
     BuildLandGeometry();
@@ -280,6 +287,11 @@ void SobelApp::OnResize()
 	if(mSobelFilter != nullptr)
 	{
 		mSobelFilter->OnResize(mClientWidth, mClientHeight);
+	}
+
+	if (mVRSPass != nullptr)
+	{
+		mVRSPass->OnResize(mClientWidth, mClientHeight);
 	}
 
 	if(mOffscreenRT != nullptr)
@@ -368,6 +380,11 @@ void SobelApp::Draw(const GameTimer& gt)
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mOffscreenRT->Resource(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
+	// TODO VRS
+	mVRSPass->Execute(mCommandList.Get(), mVRSRootSignature.Get(), mPSOs["VRSMask"].Get(), mOffscreenRT->Srv());
+	D3D12_SHADING_RATE_COMBINER chooseScreenspaceImage[2] = { D3D12_SHADING_RATE_COMBINER_PASSTHROUGH, D3D12_SHADING_RATE_COMBINER_OVERRIDE };
+	reinterpret_cast<ID3D12GraphicsCommandList5*>(mCommandList.Get())->RSSetShadingRate(D3D12_SHADING_RATE_4X4, chooseScreenspaceImage);
+	reinterpret_cast<ID3D12GraphicsCommandList5*>(mCommandList.Get())->RSSetShadingRateImage(mVRSPass->GetOutput().Get());
 	mSobelFilter->Execute(mCommandList.Get(), mPostProcessRootSignature.Get(), 
 		mPSOs["sobel"].Get(), mOffscreenRT->Srv());
 
@@ -384,6 +401,7 @@ void SobelApp::Draw(const GameTimer& gt)
 
 	mCommandList->SetGraphicsRootSignature(mPostProcessRootSignature.Get());
 	mCommandList->SetPipelineState(mPSOs["composite"].Get());
+	//mCommandList->SetGraphicsRootDescriptorTable(0, mVRSPass->OutputSrv());
 	mCommandList->SetGraphicsRootDescriptorTable(0, mOffscreenRT->Srv());
 	mCommandList->SetGraphicsRootDescriptorTable(1, mSobelFilter->OutputSrv());
 	DrawFullscreenQuad(mCommandList.Get());
@@ -612,21 +630,21 @@ void SobelApp::LoadTextures()
 {
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
-	grassTex->Filename = L"../../Textures/grass.dds";
+	grassTex->Filename = L"E:/D3DRenderer/Textures/grass.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
 
 	auto waterTex = std::make_unique<Texture>();
 	waterTex->Name = "waterTex";
-	waterTex->Filename = L"../../Textures/water1.dds";
+	waterTex->Filename = L"E:/D3DRenderer/Textures/water1.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), waterTex->Filename.c_str(),
 		waterTex->Resource, waterTex->UploadHeap));
 
 	auto fenceTex = std::make_unique<Texture>();
 	fenceTex->Name = "fenceTex";
-	fenceTex->Filename = L"../../Textures/WireFence.dds";
+	fenceTex->Filename = L"E:/D3DRenderer/Textures/WireFence.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), fenceTex->Filename.c_str(),
 		fenceTex->Resource, fenceTex->UploadHeap));
@@ -769,6 +787,51 @@ void SobelApp::BuildPostProcessRootSignature()
 		IID_PPV_ARGS(mPostProcessRootSignature.GetAddressOf())));
 }
 
+void SobelApp::BuildVRSRootSignature()
+{
+	CD3DX12_DESCRIPTOR_RANGE srvTable0;
+	srvTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE srvTable1;
+	srvTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+	CD3DX12_DESCRIPTOR_RANGE uavTable0;
+	uavTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+
+	// Root parameter can be a table, root descriptor or root constants.
+	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+
+	// Perfomance TIP: Order from most frequent to least frequent.
+	slotRootParameter[0].InitAsDescriptorTable(1, &srvTable0);
+	slotRootParameter[1].InitAsDescriptorTable(1, &srvTable1);
+	slotRootParameter[2].InitAsDescriptorTable(1, &uavTable0);
+
+	auto staticSamplers = GetStaticSamplers();
+
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter,
+		(UINT)staticSamplers.size(), staticSamplers.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+	ComPtr<ID3DBlob> serializedRootSig = nullptr;
+	ComPtr<ID3DBlob> errorBlob = nullptr;
+	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ThrowIfFailed(md3dDevice->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(mVRSRootSignature.GetAddressOf())));
+}
+
 void SobelApp::BuildDescriptorHeaps()
 {
 	// Offscreen RTV goes after the swap chain descriptors.
@@ -779,7 +842,7 @@ void SobelApp::BuildDescriptorHeaps()
 	int waveSrvOffset = srvCount;
 	int sobelSrvOffset = waveSrvOffset + mWaves->DescriptorCount();
 	int offscreenSrvOffset = sobelSrvOffset + mSobelFilter->DescriptorCount();
-
+	int vrsSrvOffset = offscreenSrvOffset + 1;
 	//
 	// Create the SRV heap.
 	//
@@ -787,7 +850,7 @@ void SobelApp::BuildDescriptorHeaps()
 	srvHeapDesc.NumDescriptors =
 		srvCount +
 		mWaves->DescriptorCount() +
-		mSobelFilter->DescriptorCount() +
+		mSobelFilter->DescriptorCount() + mVRSPass->DescriptorCount() +
 		1; // extra offscreen render target
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -841,6 +904,11 @@ void SobelApp::BuildDescriptorHeaps()
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(srvCpuStart, offscreenSrvOffset, mCbvSrvDescriptorSize),
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(srvGpuStart, offscreenSrvOffset, mCbvSrvDescriptorSize),
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvCpuStart, rtvOffset, mRtvDescriptorSize));
+
+	mVRSPass->BuildDescriptors(
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(srvCpuStart, vrsSrvOffset, mCbvSrvDescriptorSize),
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(srvGpuStart, vrsSrvOffset, mCbvSrvDescriptorSize),
+		mCbvSrvDescriptorSize);
 }
 
 void SobelApp::BuildShadersAndInputLayout()
@@ -864,16 +932,16 @@ void SobelApp::BuildShadersAndInputLayout()
 		NULL, NULL
 	};
 
-	mShaders["standardVS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", nullptr, "VS", "vs_5_0");
-	mShaders["wavesVS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", waveDefines, "VS", "vs_5_0");
-	mShaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", defines, "PS", "ps_5_0");
-	mShaders["alphaTestedPS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", alphaTestDefines, "PS", "ps_5_0");
-	mShaders["wavesUpdateCS"] = d3dUtil::CompileShader(L"Shaders\\WaveSim.hlsl", nullptr, "UpdateWavesCS", "cs_5_0");
-	mShaders["wavesDisturbCS"] = d3dUtil::CompileShader(L"Shaders\\WaveSim.hlsl", nullptr, "DisturbWavesCS", "cs_5_0");
-	mShaders["compositeVS"] = d3dUtil::CompileShader(L"Shaders\\Composite.hlsl", nullptr, "VS", "vs_5_0");
-	mShaders["compositePS"] = d3dUtil::CompileShader(L"Shaders\\Composite.hlsl", nullptr, "PS", "ps_5_0");
-	mShaders["sobelCS"] = d3dUtil::CompileShader(L"Shaders\\Sobel.hlsl", nullptr, "SobelCS", "cs_5_0");
-
+	mShaders["standardVS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Default.hlsl", nullptr, "VS", "vs_5_0");
+	mShaders["wavesVS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Default.hlsl", waveDefines, "VS", "vs_5_0");
+	mShaders["opaquePS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Default.hlsl", defines, "PS", "ps_5_0");
+	mShaders["alphaTestedPS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Default.hlsl", alphaTestDefines, "PS", "ps_5_0");
+	mShaders["wavesUpdateCS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\WaveSim.hlsl", nullptr, "UpdateWavesCS", "cs_5_0");
+	mShaders["wavesDisturbCS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\WaveSim.hlsl", nullptr, "DisturbWavesCS", "cs_5_0");
+	mShaders["compositeVS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Composite.hlsl", nullptr, "VS", "vs_5_0");
+	mShaders["compositePS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Composite.hlsl", nullptr, "PS", "ps_5_0");
+	mShaders["sobelCS"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\Sobel.hlsl", nullptr, "SobelCS", "cs_5_0");
+	mShaders["VRSMask"] = d3dUtil::CompileShader(L"E:\\D3DRenderer\\Chapter 13 The Compute Shader\\SobelFilter\\Shaders\\VRSMask.hlsl", nullptr, "VRSMask", "cs_5_0");
 
     mInputLayout =
     {
@@ -1174,6 +1242,19 @@ void SobelApp::BuildPSOs()
 	};
 	sobelPSO.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(md3dDevice->CreateComputePipelineState(&sobelPSO, IID_PPV_ARGS(&mPSOs["sobel"])));
+
+	//
+	// PSO for VRS
+	//
+	D3D12_COMPUTE_PIPELINE_STATE_DESC vrsPSO = {};
+	vrsPSO.pRootSignature = mVRSRootSignature.Get();
+	vrsPSO.CS =
+	{
+		reinterpret_cast<BYTE*>(mShaders["VRSMask"]->GetBufferPointer()),
+		mShaders["VRSMask"]->GetBufferSize()
+	};
+	vrsPSO.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(md3dDevice->CreateComputePipelineState(&vrsPSO, IID_PPV_ARGS(&mPSOs["VRSMask"])));
 }
 
 void SobelApp::BuildFrameResources()

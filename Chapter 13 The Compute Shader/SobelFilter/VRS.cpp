@@ -1,11 +1,11 @@
 #include "VRS.h"
-
+#include <cmath>
 VRSPass::VRSPass(ID3D12Device* device, UINT width, UINT height, DXGI_FORMAT format)
 {
 	md3dDevice = device;
 
-	mWidth = width;
-	mHeight = height;
+	mWidth =  std::ceil(width / 4.f);
+	mHeight = std::ceil(height / 4.f);
 	mFormat = format;
 
 	BuildResource();
@@ -19,6 +19,11 @@ CD3DX12_GPU_DESCRIPTOR_HANDLE VRSPass::OutputSrv()
 UINT VRSPass::DescriptorCount() const
 {
 	return 2;
+}
+
+Microsoft::WRL::ComPtr<ID3D12Resource> VRSPass::GetOutput()
+{
+	return mOutput;
 }
 
 void VRSPass::BuildDescriptors(CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDescriptor, CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuDescriptor, UINT descriptorSize)
@@ -64,13 +69,13 @@ void VRSPass::Execute(ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* r
 	cmdList->Dispatch(numGroupsX, numGroupsY, 1);
 
 	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mOutput.Get(),
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE));
 }
 
 void VRSPass::BuildDescriptors()
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;// D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0, D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1); // D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = mFormat;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
