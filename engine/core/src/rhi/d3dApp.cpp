@@ -2,7 +2,7 @@
 // d3dApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
 //***************************************************************************************
 
-#include "../include/d3dApp.h"
+#include "../../include/rhi/d3dApp.h"
 #include <WindowsX.h>
 
 using Microsoft::WRL::ComPtr;

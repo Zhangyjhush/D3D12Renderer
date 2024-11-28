@@ -2,7 +2,7 @@
 // Camera.h by Frank Luna (C) 2011 All Rights Reserved.
 //***************************************************************************************
 
-#include "../include/Camera.h"
+#include "../../include/render/Camera.h"
 
 using namespace DirectX;
 

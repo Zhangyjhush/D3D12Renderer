@@ -2,7 +2,7 @@
 // SobelFilter.cpp by Frank Luna (C) 2011 All Rights Reserved.
 //***************************************************************************************
 
-#include "../include/SobelFilter.h"
+#include "../../include/render/SobelFilter.h"
  
 SobelFilter::SobelFilter(ID3D12Device* device, 
 	                   UINT width, UINT height,

@@ -10,7 +10,7 @@
 #endif
 
 #include "d3dUtil.h"
-#include "GameTimer.h"
+#include "../utils/GameTimer.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -90,7 +90,7 @@ protected:
 
     D3D12_VARIABLE_SHADING_RATE_TIER      mVRSTier = D3D12_VARIABLE_SHADING_RATE_TIER::D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED;
 
-	// Used to keep track of the ìdelta-time?and game time (?.4).
+	// Used to keep track of the Êèπelta-time?and game time (?.4).
 	GameTimer mTimer;
 	
     Microsoft::WRL::ComPtr<IDXGIFactory4> mdxgiFactory;

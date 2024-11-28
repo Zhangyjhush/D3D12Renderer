@@ -2,7 +2,7 @@
 // GpuWaves.cpp by Frank Luna (C) 2011 All Rights Reserved.
 //***************************************************************************************
 
-#include "../include/GpuWaves.h"
+#include "../../include/render/GpuWaves.h"
 #include "Effects.h"
 #include <algorithm>
 #include <vector>

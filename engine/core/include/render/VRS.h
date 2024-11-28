@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../include/d3dUtil.h"
+#include "../rhi/d3dUtil.h"
 
 class VRSPass
 {

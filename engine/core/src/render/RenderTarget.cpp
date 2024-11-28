@@ -2,7 +2,7 @@
 // RenderTarget.cpp by Frank Luna (C) 2011 All Rights Reserved.
 //***************************************************************************************
 
-#include "../include/RenderTarget.h"
+#include "../../include/render/RenderTarget.h"
  
 RenderTarget::RenderTarget(ID3D12Device* device, 
 	                       UINT width, UINT height,

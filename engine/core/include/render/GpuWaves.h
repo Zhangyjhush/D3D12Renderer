@@ -9,8 +9,8 @@
 #ifndef GPUWAVES_H
 #define GPUWAVES_H
 
-#include "../include/d3dUtil.h"
-#include "../include/GameTimer.h"
+#include "../rhi/d3dUtil.h"
+#include "../utils/GameTimer.h"
 
 class GpuWaves
 {
