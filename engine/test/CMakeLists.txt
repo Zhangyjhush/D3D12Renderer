@@ -15,7 +15,12 @@ foreach(_file IN LISTS Test_SOURCES Test_HEADERS)
 endforeach()
 
 # 添加库（动态）
-add_library(test SHARED ${Test_SOURCES} ${Test_HEADERS})
+add_executable(main ${Test_SOURCES} ${Test_HEADERS})
+
+target_link_libraries(main PUBLIC core)
+
+target_include_directories(main PUBLIC core/include)
+# add_library(test SHARED ${Test_SOURCES} ${Test_HEADERS})
 if(MSVC)
-    target_compile_definitions(test PRIVATE _UNICODE UNICODE)
+    target_compile_definitions(main PRIVATE _UNICODE UNICODE)
 endif()

@@ -1,16 +1,17 @@
 //***************************************************************************************
 // SobelApp.cpp by Frank Luna (C) 2015 All Rights Reserved.
 //***************************************************************************************
-#include "../include/rhi/d3dApp.h"
-#include "../include/utils/MathHelper.h"
-#include "../include/rhi/UploadBuffer.h"
-#include "../include/utils/GeometryGenerator.h"
-#include "../include/rhi/FrameResource.h"
-#include "../include/render/GpuWaves.h"
-#include "../include/render/SobelFilter.h"
-#include "../include/render/VRS.h"
-#include "../include/render/RenderTarget.h"
-#include "../include/render/RenderItem.h"
+#include "include/rhi/d3dApp.h"
+#include "include/rhi/d3dApp.h"
+#include "include/utils/MathHelper.h"
+#include "include/rhi/UploadBuffer.h"
+#include "include/utils/GeometryGenerator.h"
+#include "include/rhi/FrameResource.h"
+#include "include/render/GpuWaves.h"
+#include "include/render/SobelFilter.h"
+#include "include/render/VRS.h"
+#include "include/render/RenderTarget.h"
+#include "include/render/RenderItem.h"
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;

@@ -6,9 +6,11 @@ set(CMAKE_BUILD_TYPE "Debug")
 
 include_directories(${CMAKE_SOURCE_DIR}/engine/core)
 include_directories(${CMAKE_SOURCE_DIR}/engine/test)
+include_directories(${CMAKE_SOURCE_DIR}/engine/win32)
 
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/engine/core) 
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/engine/test) 
+ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/engine/win32) 
 
 # include_directories(./include/)
 # aux_source_directory(./src/ DIR_SRC)

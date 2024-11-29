@@ -15,7 +15,8 @@ foreach(_file IN LISTS CORE_SOURCES CORE_HEADERS)
 endforeach()
 
 # 添加库（动态）
-add_executable( SobelApp WIN32  ${CORE_SOURCES} ${CORE_HEADERS})
+# add_executable( core WIN32  ${CORE_SOURCES} ${CORE_HEADERS})
+add_library( core ${CORE_SOURCES} ${CORE_HEADERS})
 if(MSVC)
-    target_compile_definitions(SobelApp PRIVATE _UNICODE UNICODE)
+    target_compile_definitions(core PRIVATE _UNICODE UNICODE)
 endif()
