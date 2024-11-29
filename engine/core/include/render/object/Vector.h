@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <cmath>
 
 namespace rendering
 {
@@ -14,11 +15,30 @@ namespace rendering
 		Vector(Vector<T, Cnt>&& other) noexcept;
 		T& operator[] (int i) noexcept;
 
+		float Length() const noexcept;
+		float LengthSqr() const noexcept;
+
 		Vector() noexcept = default;
 		~Vector() noexcept = default;
 	private:
 		T mData[Cnt];
 	};
+
+	template<typename T /*= float*/, int Cnt /*= 3*/>
+	float rendering::Vector<T, Cnt>::LengthSqr() const noexcept
+	{
+		T sqr = 0;
+		for (int i = 0; i < Cnt; ++i)
+			sqr += mData[i] * mData[i];
+		return sqr;
+	}
+
+	template<typename T /*= float*/, int Cnt /*= 3*/>
+	float rendering::Vector<T, Cnt>::Length() const noexcept
+	{
+		return std::sqrt(LengthSqr());
+	}
+
 	template<typename T, int Cnt>
 	inline Vector<T, Cnt>::Vector(std::initializer_list<T>&& args) noexcept
 	{
@@ -61,4 +81,13 @@ namespace rendering
 	{
 		return mData[i];
 	}
+
+
+	using Vector2f = Vector<float, 2>;
+	using Vector3f = Vector<float, 3>;
+	using Vector4f = Vector<float, 4>;
+
+	using Vector2Int = Vector<int, 2>;
+	using Vector3Int = Vector<int, 3>;
+	using Vector4Int = Vector<int, 4>;
 }
